@@ -25,6 +25,8 @@ const (
 
 	// AES256 is a const that delineates the type of encryption used (AES256)
 	AES256 = "aes"
+
+	VAULT = "vault"
 )
 
 // NewEncryptionClient takes in an application level encryption key (a KMS key)
@@ -35,7 +37,10 @@ const (
 // The application level encryption key should only exist in the root organization of an organization hierarchy
 func NewEncryptionClient(clientType string, db domain.DatabaseConnection, applicationEncryptionKey string, orgID string, profile string, region string) (client Client, err error) {
 	var orgKey string
-	orgKey, err = decryptOrganizationKey(db, applicationEncryptionKey, orgID, profile, region)
+	if clientType != VAULT {
+		orgKey, err = decryptOrganizationKey(db, applicationEncryptionKey, orgID, profile, region)
+	}
+
 	if err == nil {
 		client, err = NewEncryptionClientWithDirectKey(clientType, orgKey, region)
 	}
@@ -46,12 +51,15 @@ func NewEncryptionClient(clientType string, db domain.DatabaseConnection, applic
 // NewEncryptionClientWithDirectKey takes the key used for encryption as a direct argument, and does not grab an encrypted, organization specific key from
 // the database like NewEncryptionClient does
 // region is only needed for kms encryption and can be empty when and AES client is being created
+// if a vault client is being used to retrieve
 func NewEncryptionClientWithDirectKey(clientType string, key string, region string) (client Client, err error) {
 	switch clientType {
 	case AES256:
 		client, err = createAESClient(key)
 	case KMS:
 		client, err = CreateKMSClient(key, region)
+	case VAULT:
+		client, err = createVaultClient()
 	default:
 		err = fmt.Errorf("unrecognized encryption type [%s]", clientType)
 	}

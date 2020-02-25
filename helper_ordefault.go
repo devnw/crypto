@@ -18,6 +18,7 @@ func sord(in *string) (out string) {
 
 type config interface {
 	EncryptionKey() string
+	EncryptionType() string
 	KMSRegion() string
 	KMSProfile() string
 }
